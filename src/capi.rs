@@ -27,17 +27,21 @@ pub extern fn aoldaq_get_data(instance: *mut Aoldaq, channel: usize, n: usize, b
         return instance.get_fifo_size(channel);
     }
 
-    let data = instance.get_data(channel, n);
+    //let data = instance.get_data(channel, n);
 
-    match data {
-        Some(data) => {
-            let n = data.len();
-            let ptr = unsafe { std::slice::from_raw_parts_mut(buf, n) };
-            ptr.copy_from_slice(&data[..]);
-            n
-        },
-        None => 0
-    }
+    //match data {
+        //Some(data) => {
+            //let n = data.len();
+            //let ptr = unsafe { std::slice::from_raw_parts_mut(buf, n) };
+            //ptr.copy_from_slice(&data[..]);
+            //n
+        //},
+        //None => 0
+    //}
+
+    let ptr = unsafe { std::slice::from_raw_parts_mut(buf, n) };
+
+    instance.get_data_into(channel, ptr)
 }
 
 /// Consumes and frees everything in the specified channel.

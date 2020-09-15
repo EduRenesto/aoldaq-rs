@@ -4,6 +4,7 @@ use std::sync::{ Arc, Barrier };
 use std::sync::atomic::{ AtomicBool, Ordering };
 
 use crossbeam_channel::Receiver;
+use ringbuf::{ Consumer, RingBuffer };
 
 mod capi;
 pub use capi::*;
@@ -44,7 +45,7 @@ pub struct Aoldaq {
     threads: Vec<JoinHandle<()>>,
     pause: Arc<AtomicBool>,
     run: Arc<AtomicBool>,
-    fifos: Vec<Receiver<Vec<u32>>>,
+    fifos: Vec<Consumer<u32>>,
     device: Arc<dyn Device>,
 }
 
@@ -64,7 +65,9 @@ impl Aoldaq {
         };
 
         for i in 0..args.n_channels {
-            let (tx, rx) = crossbeam_channel::unbounded();
+            let buf = RingBuffer::new(1024 * 1024);
+            let (mut tx, rx) = buf.split();
+            //let (tx, rx) = crossbeam_channel::unbounded();
             //let (tx, rx) = crossbeam_channel::bounded(4 * 1024 * 1024);
             fifos.push(rx);
 
@@ -74,6 +77,7 @@ impl Aoldaq {
             let b = barrier.clone();
 
             let thread = std::thread::spawn(move || {
+                let mut buf = vec![666; BUCKET_SIZE];
                 //tx.send((0..10).into_iter().map(|n| n*i as u32).collect()).expect("Failed to send to fifo");
                 b.wait();
 
@@ -83,7 +87,10 @@ impl Aoldaq {
                         std::thread::park();
                     }
 
-                    tx.send(device.read_data(i, BUCKET_SIZE)).expect("Failed to send to fifo");
+                    let n_read = device.read_into(i, &mut buf[..]);
+                    tx.push_slice(&buf[..]);
+
+                    //tx.send(device.read_data(i, BUCKET_SIZE)).expect("Failed to send to fifo");
                 }
             });
             threads.push(thread);
@@ -111,33 +118,38 @@ impl Aoldaq {
         self.pause.store(true, Ordering::Relaxed);
     }
 
-    pub fn get_data(&mut self, channel: usize, n: usize) -> Option<Vec<u32>> {
+    pub fn get_data_into(&mut self, channel: usize, buf: &mut [u32]) -> usize {
         if channel > self.n_channels {
-            return None;
+            return 0;
         }
 
-        let rx = unsafe { self.fifos.get_unchecked(channel) };
+        let rx = unsafe { self.fifos.get_unchecked_mut(channel) };
 
-        if n > rx.len() {
-            let n = rx.len();
-            return Some(rx.iter().flatten().take(n).collect());
-            //return None;
-        }
+        //if n > rx.len() {
+            //let n = rx.len();
+            //return Some(rx.iter().flatten().take(n).collect());
+            ////return None;
+        //}
 
-        Some( rx.iter().flatten().take(n).collect() )
+        //Some( rx.iter().flatten().take(n).collect() )
+
+        rx.pop_slice(buf)
     }
 
     pub fn get_fifo_size(&self, channel: usize) -> usize {
         self.fifos[channel].len()
     }
 
-    pub fn flush_fifo(&self, channel: usize) {
+    pub fn flush_fifo(&mut self, channel: usize) {
         let should_restart = !self.pause.load(Ordering::Relaxed);
 
         if should_restart { self.stop(); }
-        while let Ok(data) = self.fifos[channel].try_recv() {
-            drop(data);
-        }
+        //while let Ok(data) = self.fifos[channel].try_recv() {
+            //drop(data);
+        //}
+        let rx = unsafe { self.fifos.get_unchecked_mut(channel) };
+        let n = rx.len();
+        rx.discard(n);
         if should_restart { self.start(); }
     }
 

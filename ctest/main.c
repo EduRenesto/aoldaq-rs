@@ -31,6 +31,10 @@ int main(int argc, char* argv[]) {
     aoldaq_stop(instance);
     sleep(3);
 
+    size_t n1 = aoldaq_get_data(instance, 0, 0, NULL);
+    size_t n2 = aoldaq_get_data(instance, 1, 0, NULL);
+    printf("Amount of data in channels: %ld, %ld\n", n1, n2);
+
     uint32_t *data = malloc(sizeof(uint32_t) * 42);
     size_t n_read = aoldaq_get_data(instance, 1, 42, data);
 
@@ -40,6 +44,10 @@ int main(int argc, char* argv[]) {
     }
     printf("]\n");
 
+    n1 = aoldaq_get_data(instance, 0, 0, NULL);
+    n2 = aoldaq_get_data(instance, 1, 0, NULL);
+    printf("Amount of data in channels: %ld, %ld\n", n1, n2);
+
     n_read = aoldaq_get_data(instance, 1, 42, data);
     printf("[ ");
     for(int i = 0; i < 42; i++) {
@@ -47,8 +55,8 @@ int main(int argc, char* argv[]) {
     }
     printf("]\n");
 
-    size_t n1 = aoldaq_get_data(instance, 0, 0, NULL);
-    size_t n2 = aoldaq_get_data(instance, 1, 0, NULL);
+    n1 = aoldaq_get_data(instance, 0, 0, NULL);
+    n2 = aoldaq_get_data(instance, 1, 0, NULL);
     printf("Amount of data in channels: %ld, %ld\n", n1, n2);
 
     aoldaq_flush_fifo(instance, 0);

@@ -76,4 +76,19 @@ impl Device for NiFpgaDevice {
 
         buf
     }
+
+    fn read_into(&self, channel: usize, buf: &mut [u32]) -> usize {
+        unsafe {
+            nifpga::NiFpga_ReadFifoU32(
+                self.session,
+                self.addrs[channel],
+                buf.as_mut_ptr() as *mut _,
+                buf.len() as u64,
+                0,
+                std::ptr::null_mut()
+            );
+        }
+
+        buf.len()
+    }
 }

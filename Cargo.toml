@@ -19,6 +19,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 crossbeam-channel = "0.4"
+ringbuf = "0.2"
 rand = "0.7"
 
 [build-dependencies]
