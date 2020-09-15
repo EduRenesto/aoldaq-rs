@@ -1,0 +1,27 @@
+[package]
+name = "aoldaq-rs"
+version = "0.1.0"
+authors = ["Edu Renesto <edure95@gmail.com>"]
+edition = "2018"
+build = "build.rs"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[lib]
+name = "aoldaq"
+crate-type = ["cdylib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+crossbeam-channel = "0.4"
+rand = "0.7"
+
+[build-dependencies]
+bindgen = "0.53"
+cbindgen = "0.14"
+cc = "1.0"
