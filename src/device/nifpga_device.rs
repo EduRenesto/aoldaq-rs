@@ -2,13 +2,18 @@ use super::Device;
 use crate::NiFpgaArgs;
 use crate::nifpga;
 
+use std::fs::{ File, OpenOptions };
+use std::sync::Mutex;
+use std::io::Write;
+
 pub struct NiFpgaDevice {
     session: nifpga::NiFpga_Session,
     addrs: Vec<u32>,
+    out_file: Option<Mutex<File>>,
 }
 
 impl NiFpgaDevice {
-    pub fn new(args: *const NiFpgaArgs, n_channels: usize) -> Result<NiFpgaDevice, nifpga::NiFpga_Status> {
+    pub fn new(args: *const NiFpgaArgs, n_channels: usize, dump: bool) -> Result<NiFpgaDevice, nifpga::NiFpga_Status> {
         let args = unsafe { args.as_ref().expect("NiFpgaArgs is null!") };
 
         let ret = unsafe { nifpga::NiFpga_Initialize() };
@@ -41,9 +46,27 @@ impl NiFpgaDevice {
             (0..n_channels as u32).into_iter().collect()
         };
 
+        let out_file = if dump {
+            let tmp = std::env::var("TEMP").unwrap_or("/tmp".to_string());
+            let mut tmp = std::path::PathBuf::from(tmp);
+            tmp.push("aoldaq-nifpga-out.log");
+            OpenOptions::new()
+                .truncate(true)
+                .write(true)
+                .create(true)
+                .open(tmp)
+                .map(|f| Some(Mutex::new(f)))
+                .unwrap_or(None)
+        } else {
+            None
+        };
+
+        dbg!(&out_file);
+
         Ok(NiFpgaDevice {
             session,
             addrs,
+            out_file,
         })
     }
 
@@ -87,6 +110,14 @@ impl Device for NiFpgaDevice {
                 0,
                 std::ptr::null_mut()
             );
+        }
+
+        // This whole thing is horrible and slow.
+        // This must only be used for debugging.
+        if let Some(ref mutex) = self.out_file {
+            let mut file = mutex.lock().unwrap();
+            writeln!(file, "Channel {}: {:?}", channel, buf).unwrap();
+            file.flush().unwrap();
         }
 
         buf.len()

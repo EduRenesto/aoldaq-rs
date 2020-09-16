@@ -60,7 +60,8 @@ impl Aoldaq {
 
         let device = match args.mode {
             AoldaqMode::Random => Arc::new(RandomDevice::new()) as Arc<dyn Device>,
-            AoldaqMode::NiFpga => Arc::new(NiFpgaDevice::new(args.nifpga, args.n_channels).expect("Failed to init NiFpga")) as Arc<dyn Device>,
+            AoldaqMode::NiFpga => Arc::new(NiFpgaDevice::new(args.nifpga, args.n_channels, true)
+                                           .expect("Failed to init NiFpga")) as Arc<dyn Device>,
         };
 
         for i in 0..args.n_channels {
