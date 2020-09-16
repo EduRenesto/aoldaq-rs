@@ -3,7 +3,6 @@ use std::thread::JoinHandle;
 use std::sync::{ Arc, Barrier };
 use std::sync::atomic::{ AtomicBool, Ordering };
 
-use crossbeam_channel::Receiver;
 use ringbuf::{ Consumer, RingBuffer };
 
 mod capi;
@@ -87,7 +86,7 @@ impl Aoldaq {
                         std::thread::park();
                     }
 
-                    let n_read = device.read_into(i, &mut buf[..]);
+                    device.read_into(i, &mut buf[..]);
                     tx.push_slice(&buf[..]);
 
                     //tx.send(device.read_data(i, BUCKET_SIZE)).expect("Failed to send to fifo");

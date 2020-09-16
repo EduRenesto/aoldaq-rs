@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     printf("Amount of data in channels: %ld, %ld\n", n1, n2);
 
     uint32_t *data = malloc(sizeof(uint32_t) * 42);
-    size_t n_read = aoldaq_get_data(instance, 1, 42, data);
+    size_t n_read = aoldaq_get_data(instance, 0, 42, data);
 
     printf("[ ");
     for(int i = 0; i < 42; i++) {
@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
     n2 = aoldaq_get_data(instance, 1, 0, NULL);
     printf("Amount of data in channels: %ld, %ld\n", n1, n2);
 
-    n_read = aoldaq_get_data(instance, 1, 42, data);
+    n_read = aoldaq_get_data(instance, 0, 42, data);
     printf("[ ");
     for(int i = 0; i < 42; i++) {
         printf("%u ", data[i]);

@@ -19,7 +19,7 @@ impl Device for RandomDevice {
         (0..n).into_iter().map(|_| rand::random()).collect()
     }
 
-    fn read_into(&self, channel: usize, buf: &mut [u32]) -> usize {
+    fn read_into(&self, _channel: usize, buf: &mut [u32]) -> usize {
         for i in buf.iter_mut() {
             *i = rand::random();
         }
