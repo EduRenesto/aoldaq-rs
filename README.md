@@ -11,7 +11,7 @@ what I'll be shipping.
 # Building
 
 If you want to build it by source, you will need a working Rust toolchain. The
-easiest way to do so is by installing the [rustup.rs](rustup.rs) toolchain
+easiest way to do so is by installing the [rustup.rs](https://rustup.rs) toolchain
 manager. A stable toolchain is enough, since I'm not using any nightly-only
 features.
 
