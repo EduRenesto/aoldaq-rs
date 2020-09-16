@@ -1,5 +1,7 @@
-/target
+/target/*
 Cargo.lock
 
 !*.so
 !*.dll
+
+!/target/x86_64-pc-windows-gnu/debug/aoldaq.dll
