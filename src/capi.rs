@@ -70,5 +70,5 @@ pub extern fn aoldaq_stop(instance: *mut Aoldaq) {
 #[no_mangle]
 pub extern fn aoldaq_get_nifpga_session(instance: *mut Aoldaq) -> u32 {
     let instance = unsafe { instance.as_mut().expect("Instance is null!") };
-    instance.get_nifpga_session().unwrap_or(0)
+    instance.get_nifpga_session().unwrap_or(1234)
 }
