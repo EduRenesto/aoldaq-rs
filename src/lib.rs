@@ -88,7 +88,12 @@ impl Aoldaq {
                     }
 
                     device.read_into(i, &mut buf[..]);
-                    tx.push_slice(&buf[..]);
+
+                    let mut written = 0;
+
+                    while written < BUCKET_SIZE {
+                        written += tx.push_slice(&buf[written..]);
+                    }
 
                     //tx.send(device.read_data(i, BUCKET_SIZE)).expect("Failed to send to fifo");
                 }
