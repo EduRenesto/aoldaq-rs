@@ -13,7 +13,7 @@ use device::{ Device, RandomDevice, NiFpgaDevice };
 
 mod nifpga;
 
-const BUCKET_SIZE: usize = 20;
+const BUCKET_SIZE: usize = 200;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -65,7 +65,7 @@ impl Aoldaq {
         };
 
         for i in 0..args.n_channels {
-            let buf = RingBuffer::new(1024 * 1024);
+            let buf = RingBuffer::new(10000000);
             let (mut tx, rx) = buf.split();
             //let (tx, rx) = crossbeam_channel::unbounded();
             //let (tx, rx) = crossbeam_channel::bounded(4 * 1024 * 1024);

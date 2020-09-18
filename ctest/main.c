@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 
     const aoldaq_args_t args = {
         .n_channels = 2,
-        .mode = AOLDAQ_MODE_NI_FPGA,
+        .mode = AOLDAQ_MODE_RANDOM,
         .nifpga = &nifpga,
     };
 
@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     printf("NiFpga Session: %d\n", session);
 
     aoldaq_start(instance);
-    sleep(3);
+    sleep(1);
     aoldaq_stop(instance);
     sleep(3);
 
