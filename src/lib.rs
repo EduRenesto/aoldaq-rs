@@ -13,7 +13,7 @@ use device::{ Device, RandomDevice, NiFpgaDevice };
 
 mod nifpga;
 
-const BUCKET_SIZE: usize = 200;
+const BUCKET_SIZE: usize = 2000;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -42,6 +42,7 @@ pub struct Aoldaq {
     n_channels: usize,
     mode: AoldaqMode,
     threads: Vec<JoinHandle<()>>,
+    can_acquire: Arc<AtomicBool>,
     pause: Arc<AtomicBool>,
     run: Arc<AtomicBool>,
     fifos: Vec<Consumer<u32>>,
@@ -55,6 +56,7 @@ impl Aoldaq {
 
         let pause = Arc::new(AtomicBool::new(true));
         let run = Arc::new(AtomicBool::new(true));
+        let can_acquire = Arc::new(AtomicBool::new(true));
 
         let barrier = Arc::new(Barrier::new(args.n_channels));
 
@@ -71,6 +73,7 @@ impl Aoldaq {
             //let (tx, rx) = crossbeam_channel::bounded(4 * 1024 * 1024);
             fifos.push(rx);
 
+            let can_acquire = can_acquire.clone();
             let device = device.clone();
             let pause = pause.clone();
             let run = run.clone();
@@ -91,7 +94,7 @@ impl Aoldaq {
 
                     let mut written = 0;
 
-                    while written < BUCKET_SIZE {
+                    while written < BUCKET_SIZE && can_acquire.load(Ordering::Relaxed) {
                         written += tx.push_slice(&buf[written..]);
                     }
 
@@ -105,6 +108,7 @@ impl Aoldaq {
             n_channels: args.n_channels,
             mode: args.mode,
             threads,
+            can_acquire,
             pause,
             run,
             fifos,
@@ -153,8 +157,13 @@ impl Aoldaq {
             //drop(data);
         //}
         let rx = unsafe { self.fifos.get_unchecked_mut(channel) };
-        let n = rx.len();
-        rx.discard(n);
+        self.can_acquire.store(false, Ordering::SeqCst);
+        let mut n = rx.len();
+        while n > 0 {
+            rx.discard(n);
+            n = rx.len();
+        }
+        self.can_acquire.store(true, Ordering::SeqCst);
         if should_restart { self.start(); }
     }
 
