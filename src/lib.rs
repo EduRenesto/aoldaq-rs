@@ -156,19 +156,20 @@ impl Aoldaq {
 
     pub fn flush_fifo(&mut self, channel: usize) {
         let should_restart = !self.pause.load(Ordering::Relaxed);
+        let was_acquiring = self.can_acquire.load(Ordering::Relaxed);
 
         if should_restart { self.stop(); }
         //while let Ok(data) = self.fifos[channel].try_recv() {
             //drop(data);
         //}
         let rx = unsafe { self.fifos.get_unchecked_mut(channel) };
-        self.can_acquire.store(false, Ordering::SeqCst);
+        if was_acquiring { self.can_acquire.store(false, Ordering::SeqCst); }
         let mut n = rx.len();
         while n > 0 {
             rx.discard(n);
             n = rx.len();
         }
-        self.can_acquire.store(true, Ordering::SeqCst);
+        if was_acquiring { self.can_acquire.store(true, Ordering::SeqCst); }
         if should_restart { self.start(); }
     }
 

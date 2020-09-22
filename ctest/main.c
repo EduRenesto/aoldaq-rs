@@ -17,6 +17,7 @@ int main(int argc, char* argv[]) {
 
     const aoldaq_args_t args = {
         .n_channels = 2,
+        .block_size = 4000,
         .mode = AOLDAQ_MODE_NI_FPGA,
         .nifpga = &nifpga,
     };
