@@ -10,6 +10,7 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
+debug = true
 
 [lib]
 name = "aoldaq"

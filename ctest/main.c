@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     printf("NiFpga Session: %d\n", session);
 
     aoldaq_start(instance);
-    sleep(60);
+    sleep(30);
     aoldaq_stop(instance);
     sleep(3);
 

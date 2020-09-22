@@ -117,14 +117,16 @@ impl Aoldaq {
     }
 
     pub fn start(&self) {
-        self.pause.store(false, Ordering::Relaxed);
+        self.pause.store(false, Ordering::SeqCst);
+        self.can_acquire.store(true, Ordering::SeqCst);
         for t in &self.threads {
             t.thread().unpark();
         }
     }
 
     pub fn stop(&self) {
-        self.pause.store(true, Ordering::Relaxed);
+        self.pause.store(true, Ordering::SeqCst);
+        self.can_acquire.store(false, Ordering::SeqCst);
     }
 
     pub fn get_data_into(&mut self, channel: usize, buf: &mut [u32]) -> usize {
@@ -194,5 +196,27 @@ impl Drop for Aoldaq {
         }
 
         println!("AOLDAQ finished.");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_ringbuffer() {
+        let fifo = ringbuf::RingBuffer::new(5);
+        let (mut tx, mut rx) = fifo.split();
+
+        let from = vec![2, 3, 4, 5, 6, 7, 8];
+
+        let n1 = tx.push_slice(&from[..]);
+        assert_eq!(n1, 5);
+
+        let n1 = tx.push_slice(&from[n1..]);
+        assert_eq!(n1, 0);
+
+        let mut to = vec![0; 5];
+        rx.pop_slice(&mut to[..]);
+
+        assert_eq!(&to[..], &[2, 3, 4, 5, 6]);
     }
 }

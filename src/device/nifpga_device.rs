@@ -64,7 +64,7 @@ impl NiFpgaDevice {
 
         dbg!(&out_file);
 
-        let counters = vec![Arc::new(AtomicUsize::new(0)); n_channels];
+        let mut counters = ( 0..n_channels ).into_iter().map(|_| Arc::new(AtomicUsize::new(0))).collect::<Vec<_>>();
 
         Ok(NiFpgaDevice {
             session,
@@ -81,6 +81,7 @@ impl NiFpgaDevice {
 
 impl Drop for NiFpgaDevice {
     fn drop(&mut self) {
+        println!("NiFpga device wrote {} {}", self.counters[0].load(Ordering::Relaxed), self.counters[1].load(Ordering::Relaxed));
         unsafe { nifpga::NiFpga_Close(self.session, 0) }; // TODO fix attribute
         unsafe { nifpga::NiFpga_Finalize() };
     }
