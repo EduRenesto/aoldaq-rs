@@ -3,13 +3,14 @@ use crate::NiFpgaArgs;
 use crate::nifpga;
 
 use std::fs::{ File, OpenOptions };
-use std::sync::Mutex;
+use std::sync::{ Arc, atomic::AtomicUsize, atomic::Ordering, Mutex };
 use std::io::Write;
 
 pub struct NiFpgaDevice {
     session: nifpga::NiFpga_Session,
     addrs: Vec<u32>,
     out_file: Option<Mutex<File>>,
+    counters: Vec<Arc<AtomicUsize>>,
 }
 
 impl NiFpgaDevice {
@@ -63,10 +64,13 @@ impl NiFpgaDevice {
 
         dbg!(&out_file);
 
+        let counters = vec![Arc::new(AtomicUsize::new(0)); n_channels];
+
         Ok(NiFpgaDevice {
             session,
             addrs,
             out_file,
+            counters,
         })
     }
 
@@ -101,15 +105,20 @@ impl Device for NiFpgaDevice {
     }
 
     fn read_into(&self, channel: usize, buf: &mut [u32]) -> usize {
-        unsafe {
-            nifpga::NiFpga_ReadFifoU32(
-                self.session,
-                self.addrs[channel],
-                buf.as_mut_ptr() as *mut _,
-                buf.len() as u64,
-                0,
-                std::ptr::null_mut()
-            );
+        // TODO uncomment this after debugging!
+        //unsafe {
+            //nifpga::NiFpga_ReadFifoU32(
+                //self.session,
+                //self.addrs[channel],
+                //buf.as_mut_ptr() as *mut _,
+                //buf.len() as u64,
+                //0,
+                //std::ptr::null_mut()
+            //);
+        //}
+
+        for i in buf.iter_mut() {
+            *i = ( self.counters[channel].fetch_add(1, Ordering::Relaxed) % (512*512) ) as u32 + 1; // This only runs on one thread, so relaxed is fine
         }
 
         // This whole thing is horrible and slow.
