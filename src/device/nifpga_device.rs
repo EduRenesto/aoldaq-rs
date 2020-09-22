@@ -113,7 +113,7 @@ impl Device for NiFpgaDevice {
                 self.addrs[channel],
                 buf.as_mut_ptr() as *mut _,
                 buf.len() as u64,
-                0,
+                nifpga::NiFpga_InfiniteTimeout,
                 std::ptr::null_mut()
             );
         }

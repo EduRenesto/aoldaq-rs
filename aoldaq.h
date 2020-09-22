@@ -22,6 +22,7 @@ typedef struct {
 } NiFpgaArgs;
 
 typedef struct {
+  uintptr_t block_size;
   uintptr_t n_channels;
   aoldaq_mode mode;
   const NiFpgaArgs *nifpga;

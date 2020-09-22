@@ -24,6 +24,7 @@ pub enum AoldaqMode {
 
 #[repr(C)]
 pub struct AoldaqArgs {
+    block_size: usize,
     n_channels: usize,
     mode: AoldaqMode,
     nifpga: *const NiFpgaArgs
@@ -66,6 +67,8 @@ impl Aoldaq {
                                            .expect("Failed to init NiFpga")) as Arc<dyn Device>,
         };
 
+        let block_size = args.block_size;
+
         for i in 0..args.n_channels {
             let buf = RingBuffer::new(10000000);
             let (mut tx, rx) = buf.split();
@@ -80,7 +83,7 @@ impl Aoldaq {
             let b = barrier.clone();
 
             let thread = std::thread::spawn(move || {
-                let mut buf = vec![666; BUCKET_SIZE];
+                let mut buf = vec![666; block_size];
                 //tx.send((0..10).into_iter().map(|n| n*i as u32).collect()).expect("Failed to send to fifo");
                 b.wait();
 
@@ -94,7 +97,7 @@ impl Aoldaq {
 
                     let mut written = 0;
 
-                    while written < BUCKET_SIZE && can_acquire.load(Ordering::Relaxed) {
+                    while written < block_size && can_acquire.load(Ordering::Relaxed) {
                         written += tx.push_slice(&buf[written..]);
                     }
 
