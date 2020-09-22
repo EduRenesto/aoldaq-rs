@@ -62,8 +62,6 @@ impl NiFpgaDevice {
             None
         };
 
-        dbg!(&out_file);
-
         let mut counters = ( 0..n_channels ).into_iter().map(|_| Arc::new(AtomicUsize::new(0))).collect::<Vec<_>>();
 
         Ok(NiFpgaDevice {
@@ -81,7 +79,7 @@ impl NiFpgaDevice {
 
 impl Drop for NiFpgaDevice {
     fn drop(&mut self) {
-        println!("NiFpga device wrote {} {}", self.counters[0].load(Ordering::Relaxed), self.counters[1].load(Ordering::Relaxed));
+        log::debug!("NiFpga device wrote {} {}", self.counters[0].load(Ordering::Relaxed), self.counters[1].load(Ordering::Relaxed));
         unsafe { nifpga::NiFpga_Close(self.session, 0) }; // TODO fix attribute
         unsafe { nifpga::NiFpga_Finalize() };
     }
@@ -105,9 +103,9 @@ impl Device for NiFpgaDevice {
         buf
     }
 
-    fn read_into(&self, channel: usize, buf: &mut [u32]) -> usize {
+    fn read_into(&self, channel: usize, buf: &mut [u32]) -> Result<usize, i32> {
         // TODO uncomment this after debugging!
-        unsafe {
+        let ret = unsafe {
             nifpga::NiFpga_ReadFifoU32(
                 self.session,
                 self.addrs[channel],
@@ -115,21 +113,26 @@ impl Device for NiFpgaDevice {
                 buf.len() as u64,
                 nifpga::NiFpga_InfiniteTimeout,
                 std::ptr::null_mut()
-            );
+            )
+        };
+
+        if ret != nifpga::NiFpga_Status_Success {
+            //for i in buf.iter_mut() {
+            // This only runs on one thread, so relaxed is fine
+            //*i = ( self.counters[channel].fetch_add(1, Ordering::Relaxed) % (512*512) ) as u32 + 1; 
+            //}
+
+            // This whole thing is horrible and slow.
+            // This must only be used for debugging.
+            if let Some(ref mutex) = self.out_file {
+                let mut file = mutex.lock().unwrap();
+                writeln!(file, "Channel {}: {:?}", channel, buf).unwrap();
+                file.flush().unwrap();
+            }
+
+            Ok(buf.len())
+        } else {
+            Err(ret)
         }
-
-        //for i in buf.iter_mut() {
-            //*i = ( self.counters[channel].fetch_add(1, Ordering::Relaxed) % (512*512) ) as u32 + 1; // This only runs on one thread, so relaxed is fine
-        //}
-
-        // This whole thing is horrible and slow.
-        // This must only be used for debugging.
-        if let Some(ref mutex) = self.out_file {
-            let mut file = mutex.lock().unwrap();
-            writeln!(file, "Channel {}: {:?}", channel, buf).unwrap();
-            file.flush().unwrap();
-        }
-
-        buf.len()
     }
 }

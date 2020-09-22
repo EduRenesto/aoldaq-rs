@@ -3,7 +3,7 @@ pub use nifpga_device::NiFpgaDevice;
 
 pub trait Device: Send + Sync {
     fn read_data(&self, channel: usize, n: usize) ->  Vec<u32>;
-    fn read_into(&self, channel: usize, buf: &mut [u32]) -> usize;
+    fn read_into(&self, channel: usize, buf: &mut [u32]) -> Result<usize, i32>;
 }
 
 pub struct RandomDevice;
@@ -19,12 +19,12 @@ impl Device for RandomDevice {
         (0..n).into_iter().map(|_| rand::random()).collect()
     }
 
-    fn read_into(&self, _channel: usize, buf: &mut [u32]) -> usize {
+    fn read_into(&self, _channel: usize, buf: &mut [u32]) -> Result<usize, i32> {
         for i in buf.iter_mut() {
             *i = rand::random();
         }
 
-        buf.len()
+        Ok(buf.len())
     }
 }
 

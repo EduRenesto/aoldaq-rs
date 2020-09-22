@@ -5,6 +5,17 @@ use std::sync::atomic::{ AtomicBool, Ordering };
 
 use ringbuf::{ Consumer, RingBuffer };
 
+#[cfg(unix)]
+use simplelog::TermLogger;
+#[cfg(not(unix))]
+use simplelog::WriteLogger;
+
+use simplelog::{ 
+    LevelFilter,
+    TerminalMode,
+    Config
+};
+
 mod capi;
 pub use capi::*;
 
@@ -13,7 +24,7 @@ use device::{ Device, RandomDevice, NiFpgaDevice };
 
 mod nifpga;
 
-const BUCKET_SIZE: usize = 2000;
+const _BUCKET_SIZE: usize = 2000;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
@@ -52,6 +63,19 @@ pub struct Aoldaq {
 
 impl Aoldaq {
     pub fn create(args: &AoldaqArgs) -> Aoldaq {
+        // Init logging
+        #[cfg(unix)]
+        TermLogger::init(LevelFilter::max(), Config::default(), TerminalMode::Mixed).unwrap_or(());
+
+        #[cfg(not(unix))]
+        {
+            let tmp = std::env::var("TEMP").unwrap_or("/tmp".to_string());
+            let mut tmp = std::path::PathBuf::from(tmp);
+            tmp.push("aoldaq.log");
+            
+            WriteLogger::init(LevelFilter::max(), Config::default(), std::fs::File::create(tmp).unwrap()).unwrap_or(());
+        }
+
         let mut threads = Vec::with_capacity(args.n_channels);
         let mut fifos = Vec::with_capacity(args.n_channels);
 
@@ -89,23 +113,31 @@ impl Aoldaq {
 
                 while run.load(Ordering::Relaxed) {
                     if pause.load(Ordering::Relaxed) {
-                        println!("Parking thread {}", i);
+                        //println!("Parking thread {}", i);
+                        log::info!("Parking thread {}", i);
                         std::thread::park();
                     }
 
-                    device.read_into(i, &mut buf[..]);
+                    match device.read_into(i, &mut buf[..]) {
+                        Ok(_n) => {
+                            let mut written = 0;
 
-                    let mut written = 0;
+                            while written < block_size && can_acquire.load(Ordering::Relaxed) {
+                                written += tx.push_slice(&buf[written..]);
+                            }
 
-                    while written < block_size && can_acquire.load(Ordering::Relaxed) {
-                        written += tx.push_slice(&buf[written..]);
-                    }
-
-                    //tx.send(device.read_data(i, BUCKET_SIZE)).expect("Failed to send to fifo");
+                            //tx.send(device.read_data(i, BUCKET_SIZE)).expect("Failed to send to fifo");
+                        }
+                        Err(e) => {
+                            log::error!("Device read error: {}", e);
+                        }
+                    };
                 }
             });
             threads.push(thread);
         }
+
+        log::info!("AOLDAQ started.");
 
         Aoldaq {
             n_channels: args.n_channels,
@@ -187,7 +219,7 @@ impl Aoldaq {
 
 impl Drop for Aoldaq {
     fn drop(&mut self) {
-        println!("AOLDAQ finishing...");
+        log::info!("AOLDAQ finishing...");
         self.run.store(false, Ordering::Relaxed);
         self.start();
 
@@ -199,7 +231,7 @@ impl Drop for Aoldaq {
             drop(fifo);
         }
 
-        println!("AOLDAQ finished.");
+        log::info!("AOLDAQ finished.");
     }
 }
 
