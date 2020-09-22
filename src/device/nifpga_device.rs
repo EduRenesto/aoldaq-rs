@@ -107,20 +107,20 @@ impl Device for NiFpgaDevice {
 
     fn read_into(&self, channel: usize, buf: &mut [u32]) -> usize {
         // TODO uncomment this after debugging!
-        //unsafe {
-            //nifpga::NiFpga_ReadFifoU32(
-                //self.session,
-                //self.addrs[channel],
-                //buf.as_mut_ptr() as *mut _,
-                //buf.len() as u64,
-                //0,
-                //std::ptr::null_mut()
-            //);
-        //}
-
-        for i in buf.iter_mut() {
-            *i = ( self.counters[channel].fetch_add(1, Ordering::Relaxed) % (512*512) ) as u32 + 1; // This only runs on one thread, so relaxed is fine
+        unsafe {
+            nifpga::NiFpga_ReadFifoU32(
+                self.session,
+                self.addrs[channel],
+                buf.as_mut_ptr() as *mut _,
+                buf.len() as u64,
+                0,
+                std::ptr::null_mut()
+            );
         }
+
+        //for i in buf.iter_mut() {
+            //*i = ( self.counters[channel].fetch_add(1, Ordering::Relaxed) % (512*512) ) as u32 + 1; // This only runs on one thread, so relaxed is fine
+        //}
 
         // This whole thing is horrible and slow.
         // This must only be used for debugging.
