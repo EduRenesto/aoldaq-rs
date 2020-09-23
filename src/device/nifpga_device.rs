@@ -116,7 +116,7 @@ impl Device for NiFpgaDevice {
             )
         };
 
-        if ret != nifpga::NiFpga_Status_Success {
+        if ret == nifpga::NiFpga_Status_Success {
             //for i in buf.iter_mut() {
             // This only runs on one thread, so relaxed is fine
             //*i = ( self.counters[channel].fetch_add(1, Ordering::Relaxed) % (512*512) ) as u32 + 1; 
