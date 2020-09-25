@@ -44,6 +44,25 @@ pub extern fn aoldaq_get_data(instance: *mut Aoldaq, channel: usize, n: usize, b
     instance.get_data_into(channel, ptr)
 }
 
+/// Tries to return `n` `uint32_t`s of data, blocking for at most `timeout` milliseconds
+/// if there's not enough data. Returns 0 if unsuccessful.
+/// Assumes that `buf` is a preallocated buffer capable of receiving all the data.
+#[no_mangle]
+pub extern fn aoldaq_get_data_blocking(instance: *mut Aoldaq, channel: usize, n: usize, buf: *mut u32, timeout: u64) -> usize {
+    let instance = unsafe { instance.as_mut().expect("Instance is null!") };
+
+    // Just return the amount of data in the fifo
+    if n == 0 {
+        return instance.get_fifo_size(channel);
+    }
+
+    let ptr = unsafe { std::slice::from_raw_parts_mut(buf, n) };
+
+    let timeout = std::time::Duration::from_millis(timeout);
+
+    instance.get_data_into_blocking(channel, ptr, timeout)
+}
+
 /// Consumes and frees everything in the specified channel.
 #[no_mangle]
 pub extern fn aoldaq_flush_fifo(instance: *mut Aoldaq, channel: usize) {

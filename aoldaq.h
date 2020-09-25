@@ -50,6 +50,17 @@ void aoldaq_flush_fifo(aoldaq_t *instance, uintptr_t channel);
 uintptr_t aoldaq_get_data(aoldaq_t *instance, uintptr_t channel, uintptr_t n, uint32_t *buf);
 
 /**
+ * Tries to return `n` `uint32_t`s of data, blocking for at most `timeout` milliseconds
+ * if there's not enough data. Returns 0 if unsuccessful.
+ * Assumes that `buf` is a preallocated buffer capable of receiving all the data.
+ */
+uintptr_t aoldaq_get_data_blocking(aoldaq_t *instance,
+                                   uintptr_t channel,
+                                   uintptr_t n,
+                                   uint32_t *buf,
+                                   uint64_t timeout);
+
+/**
  * Returns the underlying NiFPGA session object.
  */
 uint32_t aoldaq_get_nifpga_session(aoldaq_t *instance);

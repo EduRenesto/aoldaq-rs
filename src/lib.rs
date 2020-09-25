@@ -182,6 +182,24 @@ impl Aoldaq {
         rx.pop_slice(buf)
     }
 
+    pub fn get_data_into_blocking(&mut self, channel: usize, buf: &mut [u32], timeout: std::time::Duration) -> usize {
+        if channel > self.n_channels {
+            return 0;
+        }
+
+        let rx = unsafe { self.fifos.get_unchecked_mut(channel) };
+
+        let mut time_spent = std::time::Duration::from_micros(0);
+        let wait_interval = std::time::Duration::from_millis(1);
+
+        while time_spent < timeout && buf.len() > rx.len() {
+            std::thread::sleep(wait_interval);
+            time_spent += wait_interval;
+        }
+
+        rx.pop_slice(buf)
+    }
+
     pub fn get_fifo_size(&self, channel: usize) -> usize {
         self.fifos[channel].len()
     }
