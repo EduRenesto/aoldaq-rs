@@ -124,6 +124,10 @@ impl Aoldaq {
 
                             while written < block_size && can_acquire.load(Ordering::Relaxed) {
                                 written += tx.push_slice(&buf[written..]);
+
+                                if written < block_size {
+                                    log::debug!("Overflow: Full fifo for channel {}, wrote {} out of {}", i, written, block_size);
+                                }
                             }
 
                             //tx.send(device.read_data(i, BUCKET_SIZE)).expect("Failed to send to fifo");
@@ -189,6 +193,13 @@ impl Aoldaq {
 
         let rx = unsafe { self.fifos.get_unchecked_mut(channel) };
 
+        if buf.len() > rx.len() {
+            log::debug!("Underflow: Tried to get {} points from channel {} which has {} points",
+                        buf.len(),
+                        channel,
+                        rx.len());
+        }
+
         let mut time_spent = std::time::Duration::from_micros(0);
         let wait_interval = std::time::Duration::from_millis(1);
 
@@ -197,6 +208,9 @@ impl Aoldaq {
             time_spent += wait_interval;
         }
 
+        if time_spent >= wait_interval {
+            log::debug!("Slept for {}ms total waiting for data for channel {}", time_spent.as_millis(), channel);
+        }
         rx.pop_slice(buf)
     }
 
@@ -212,6 +226,14 @@ impl Aoldaq {
         //while let Ok(data) = self.fifos[channel].try_recv() {
             //drop(data);
         //}
+
+        log::debug!("flush_fifo({}) requested", channel);
+        log::debug!("current total points in sw fifo: {:?}",
+                    (0..self.n_channels)
+                    .into_iter()
+                    .map(|i| self.get_fifo_size(i))
+                    .collect::<Vec<_>>());
+
         let rx = unsafe { self.fifos.get_unchecked_mut(channel) };
         if was_acquiring { self.can_acquire.store(false, Ordering::SeqCst); }
         let mut n = rx.len();
@@ -219,6 +241,14 @@ impl Aoldaq {
             rx.discard(n);
             n = rx.len();
         }
+
+        log::debug!("flush_fifo done");
+        log::debug!("current total points in sw fifo: {:?}",
+                    (0..self.n_channels)
+                    .into_iter()
+                    .map(|i| self.get_fifo_size(i))
+                    .collect::<Vec<_>>());
+
         if was_acquiring { self.can_acquire.store(true, Ordering::SeqCst); }
         if should_restart { self.start(); }
     }
