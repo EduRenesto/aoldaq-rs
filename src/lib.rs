@@ -243,7 +243,6 @@ impl Aoldaq {
             n = rx.len();
         }
 
-        log::debug!("flush_fifo done");
         log::debug!("current total points in sw fifo: {:?}",
                     (0..self.n_channels)
                     .into_iter()
@@ -256,6 +255,8 @@ impl Aoldaq {
 
         if was_acquiring { self.can_acquire.store(true, Ordering::SeqCst); }
         if should_restart { self.start(); }
+
+        log::debug!("flush_fifo done");
     }
 
     pub unsafe fn flush_hardware_fifo(&self, channel: usize) {
@@ -263,6 +264,7 @@ impl Aoldaq {
             AoldaqMode::Random => (),
             AoldaqMode::NiFpga => {
                 let n = self.device.poll(channel).unwrap_or(0);
+                log::debug!("current total points in hw fifo channel {}: {}", channel, n);
                 let mut buffer= vec![0u32; n];
                 let ptr = Arc::as_ptr(&self.device);
                 let device: *const device::NiFpgaDevice = ptr as *const _;
@@ -275,9 +277,9 @@ impl Aoldaq {
                                            fifo,
                                            buffer.as_mut_ptr(),
                                            n as u64,
-                                           nifpga::NiFpga_InfiniteTimeout,
+                                           100,
                                            std::ptr::null_mut());
-
+                log::debug!("current total points in hw fifo channel {}: {}", channel, n);
             }
         }
     }
