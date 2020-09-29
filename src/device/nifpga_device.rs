@@ -8,7 +8,7 @@ use std::io::Write;
 
 pub struct NiFpgaDevice {
     session: nifpga::NiFpga_Session,
-    addrs: Vec<u32>,
+    pub addrs: Vec<u32>,
     out_file: Option<Mutex<File>>,
     counters: Vec<Arc<AtomicUsize>>,
 }

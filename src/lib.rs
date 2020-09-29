@@ -250,8 +250,37 @@ impl Aoldaq {
                     .map(|i| self.get_fifo_size(i))
                     .collect::<Vec<_>>());
 
+        unsafe {
+            self.flush_hardware_fifo(channel);
+        }
+
         if was_acquiring { self.can_acquire.store(true, Ordering::SeqCst); }
         if should_restart { self.start(); }
+    }
+
+    pub unsafe fn flush_hardware_fifo(&self, channel: usize) {
+        let n = self.get_fifo_size(channel);
+        let mut buffer= vec![0u32; n];
+
+        match self.mode {
+            AoldaqMode::Random => (),
+            AoldaqMode::NiFpga => {
+                let ptr = Arc::as_ptr(&self.device);
+                let device: *const device::NiFpgaDevice = ptr as *const _;
+
+                let session = ( *device ).get_nifpga_session();
+
+                let fifo = (*device).addrs[channel];
+
+                nifpga::NiFpga_ReadFifoU32(session,
+                                           fifo,
+                                           buffer.as_mut_ptr(),
+                                           n as u64,
+                                           nifpga::NiFpga_InfiniteTimeout,
+                                           std::ptr::null_mut());
+
+            }
+        }
     }
 
     pub fn get_nifpga_session(&self) -> Option<nifpga::NiFpga_Session> {
