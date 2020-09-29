@@ -35,19 +35,19 @@ pub enum AoldaqMode {
 
 #[repr(C)]
 pub struct AoldaqArgs {
-    block_size: usize,
-    n_channels: usize,
-    mode: AoldaqMode,
-    nifpga: *const NiFpgaArgs
+    pub block_size: usize,
+    pub n_channels: usize,
+    pub mode: AoldaqMode,
+    pub nifpga: *const NiFpgaArgs
 }
 
 #[repr(C)]
 pub struct NiFpgaArgs {
-    bitfile: *const std::os::raw::c_char,
-    signature: *const std::os::raw::c_char,
-    resource: *const std::os::raw::c_char,
-    attribute: u32,
-    addrs: *const u32,
+    pub bitfile: *const std::os::raw::c_char,
+    pub signature: *const std::os::raw::c_char,
+    pub resource: *const std::os::raw::c_char,
+    pub attribute: u32,
+    pub addrs: *const u32,
 }
 
 pub struct Aoldaq {
@@ -94,7 +94,8 @@ impl Aoldaq {
         let block_size = args.block_size;
 
         for i in 0..args.n_channels {
-            let buf = RingBuffer::new(10000000);
+            let buf = RingBuffer::new(4 * 268435456); // 4GB worth of points. If needed, can safely be increased
+            //let buf = RingBuffer::new(512*512);
             let (mut tx, rx) = buf.split();
             //let (tx, rx) = crossbeam_channel::unbounded();
             //let (tx, rx) = crossbeam_channel::bounded(4 * 1024 * 1024);
