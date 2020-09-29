@@ -135,4 +135,20 @@ impl Device for NiFpgaDevice {
             Err(ret)
         }
     }
+
+    fn poll(&self, channel: usize) -> Option<usize> {
+        let mut n = 0u64;
+
+        unsafe {
+            nifpga::NiFpga_ReadFifoU32(self.session, 
+                                       self.addrs[channel],
+                                       std::ptr::null_mut(),
+                                       0 as u64,
+                                       nifpga::NiFpga_InfiniteTimeout,
+                                       &mut n as *mut _,
+                                       );
+        }
+
+        Some(n as usize)
+    }
 }

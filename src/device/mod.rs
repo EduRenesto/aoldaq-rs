@@ -4,6 +4,7 @@ pub use nifpga_device::NiFpgaDevice;
 pub trait Device: Send + Sync {
     fn read_data(&self, channel: usize, n: usize) ->  Vec<u32>;
     fn read_into(&self, channel: usize, buf: &mut [u32]) -> Result<usize, i32>;
+    fn poll(&self, channel: usize) -> Option<usize>;
 }
 
 pub struct RandomDevice;
@@ -25,6 +26,10 @@ impl Device for RandomDevice {
         }
 
         Ok(buf.len())
+    }
+
+    fn poll(&self, _channel: usize) -> Option<usize> {
+        None
     }
 }
 

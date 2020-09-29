@@ -259,12 +259,11 @@ impl Aoldaq {
     }
 
     pub unsafe fn flush_hardware_fifo(&self, channel: usize) {
-        let n = self.get_fifo_size(channel);
-        let mut buffer= vec![0u32; n];
-
         match self.mode {
             AoldaqMode::Random => (),
             AoldaqMode::NiFpga => {
+                let n = self.device.poll(channel).unwrap_or(0);
+                let mut buffer= vec![0u32; n];
                 let ptr = Arc::as_ptr(&self.device);
                 let device: *const device::NiFpgaDevice = ptr as *const _;
 
