@@ -59,6 +59,7 @@ pub struct Aoldaq {
     run: Arc<AtomicBool>,
     fifos: Vec<Consumer<u32>>,
     device: Arc<dyn Device>,
+    pause_barrier: Arc<Barrier>,
 }
 
 impl Aoldaq {
@@ -85,6 +86,9 @@ impl Aoldaq {
 
         let barrier = Arc::new(Barrier::new(args.n_channels));
 
+        // One barrier for the main thread, and one for each thread
+        let pause_barrier = Arc::new(Barrier::new(args.n_channels + 1));
+
         let device = match args.mode {
             AoldaqMode::Random => Arc::new(RandomDevice::new()) as Arc<dyn Device>,
             AoldaqMode::NiFpga => Arc::new(NiFpgaDevice::new(args.nifpga, args.n_channels, false)
@@ -104,6 +108,7 @@ impl Aoldaq {
             let can_acquire = can_acquire.clone();
             let device = device.clone();
             let pause = pause.clone();
+            let pause_barrier = pause_barrier.clone();
             let run = run.clone();
             let b = barrier.clone();
 
@@ -116,6 +121,7 @@ impl Aoldaq {
                     if pause.load(Ordering::Relaxed) {
                         //println!("Parking thread {}", i);
                         log::info!("Parking thread {}", i);
+                        pause_barrier.wait();
                         std::thread::park();
                     }
 
@@ -142,6 +148,8 @@ impl Aoldaq {
             threads.push(thread);
         }
 
+        pause_barrier.wait();
+
         log::info!("AOLDAQ started.");
 
         Aoldaq {
@@ -153,6 +161,7 @@ impl Aoldaq {
             run,
             fifos,
             device,
+            pause_barrier,
         }
     }
 
@@ -167,6 +176,7 @@ impl Aoldaq {
     pub fn stop(&self) {
         self.pause.store(true, Ordering::SeqCst);
         self.can_acquire.store(false, Ordering::SeqCst);
+        self.pause_barrier.wait();
     }
 
     pub fn get_data_into(&mut self, channel: usize, buf: &mut [u32]) -> usize {
@@ -221,7 +231,7 @@ impl Aoldaq {
 
     pub fn flush_fifo(&mut self, channel: usize) {
         let should_restart = !self.pause.load(Ordering::Relaxed);
-        let was_acquiring = self.can_acquire.load(Ordering::Relaxed);
+        // let was_acquiring = self.can_acquire.load(Ordering::Relaxed);
 
         if should_restart { self.stop(); }
         //while let Ok(data) = self.fifos[channel].try_recv() {
@@ -236,7 +246,8 @@ impl Aoldaq {
                     .collect::<Vec<_>>());
 
         let rx = unsafe { self.fifos.get_unchecked_mut(channel) };
-        if was_acquiring { self.can_acquire.store(false, Ordering::SeqCst); }
+        // if was_acquiring { self.can_acquire.store(false, Ordering::SeqCst); }
+        self.can_acquire.store(false, Ordering::SeqCst);
         let mut n = rx.len();
         while n > 0 {
             rx.discard(n);
@@ -253,7 +264,8 @@ impl Aoldaq {
             self.flush_hardware_fifo(channel);
         }
 
-        if was_acquiring { self.can_acquire.store(true, Ordering::SeqCst); }
+        // if was_acquiring { self.can_acquire.store(true, Ordering::SeqCst); }
+        self.can_acquire.store(true, Ordering::SeqCst);
         if should_restart { self.start(); }
 
         log::debug!("flush_fifo done");

@@ -62,7 +62,7 @@ impl NiFpgaDevice {
             None
         };
 
-        let mut counters = ( 0..n_channels ).into_iter().map(|_| Arc::new(AtomicUsize::new(0))).collect::<Vec<_>>();
+        let counters = ( 0..n_channels ).into_iter().map(|_| Arc::new(AtomicUsize::new(0))).collect::<Vec<_>>();
 
         Ok(NiFpgaDevice {
             session,
